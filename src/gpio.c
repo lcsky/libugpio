@@ -17,7 +17,7 @@
 #include <ugpio.h>
 #include <ugpio-internal.h>
 
-int gpio_is_requested(unsigned int gpio)
+int gpio_is_requested(const char *gpio)
 {
     return gpio_check(gpio, GPIO_VALUE);
 }
@@ -28,7 +28,7 @@ int gpio_request(unsigned int gpio, const char *label)
 
     snprintf(buffer, sizeof(buffer), "%d\n", gpio);
 
-    return gpio_write(-1, GPIO_EXPORT, buffer, strlen(buffer));
+    return gpio_write("", GPIO_EXPORT, buffer, strlen(buffer));
 }
 
 int gpio_free(unsigned int gpio)
@@ -37,15 +37,15 @@ int gpio_free(unsigned int gpio)
 
     snprintf(buffer, sizeof(buffer), "%d\n", gpio);
 
-    return gpio_write(-1, GPIO_UNEXPORT, buffer, strlen(buffer));
+    return gpio_write("", GPIO_UNEXPORT, buffer, strlen(buffer));
 }
 
-int gpio_alterable_direction(unsigned int gpio)
+int gpio_alterable_direction(const char *gpio)
 {
     return gpio_check(gpio, GPIO_DIRECTION);
 }
 
-int gpio_get_direction(unsigned int gpio)
+int gpio_get_direction(const char *gpio)
 {
     char buffer;
 
@@ -55,19 +55,19 @@ int gpio_get_direction(unsigned int gpio)
     return (buffer == 'i') ? GPIOF_DIR_IN : GPIOF_DIR_OUT;
 }
 
-int gpio_direction_input(unsigned int gpio)
+int gpio_direction_input(const char *gpio)
 {
     return gpio_write(gpio, GPIO_DIRECTION, "in", 3);
 }
 
-int gpio_direction_output(unsigned int gpio, int value)
+int gpio_direction_output(const char *gpio, int value)
 {
     char *val = value ? "high" : "low";
 
     return gpio_write(gpio, GPIO_DIRECTION, val, strlen(val) + 1);
 }
 
-int gpio_get_activelow(unsigned int gpio)
+int gpio_get_activelow(const char *gpio)
 {
     char buffer;
 
@@ -77,12 +77,12 @@ int gpio_get_activelow(unsigned int gpio)
     return buffer - '0';
 }
 
-int gpio_set_activelow(unsigned int gpio, int value)
+int gpio_set_activelow(const char *gpio, int value)
 {
     return gpio_write(gpio, GPIO_ACTIVELOW, value ? "1" : "0", 2);
 }
 
-int gpio_get_value(unsigned int gpio)
+int gpio_get_value(const char *gpio)
 {
     char buffer;
 
@@ -92,7 +92,7 @@ int gpio_get_value(unsigned int gpio)
     return !!(buffer - '0');
 }
 
-int gpio_set_value(unsigned int gpio, int value)
+int gpio_set_value(const char *gpio, int value)
 {
     return gpio_write(gpio, GPIO_VALUE, value ? "1" : "0", 2);
 }
@@ -102,7 +102,9 @@ int gpio_request_one(unsigned int gpio, unsigned int flags, const char *label)
     int rv;
     int is_requested;
 
-    if ((is_requested = gpio_is_requested(gpio)) < 0)
+    char gpioname[10];
+    snprintf(gpioname, sizeof(gpioname), GPIO_DEFAULT_NAME, gpio);
+    if ((is_requested = gpio_is_requested(gpioname)) < 0)
         return -1;
 
     if (!is_requested) {
@@ -111,18 +113,18 @@ int gpio_request_one(unsigned int gpio, unsigned int flags, const char *label)
     }
 
     if (flags & GPIOF_DIR_IN)
-        rv = gpio_direction_input(gpio);
+        rv = gpio_direction_input(gpioname);
     else
-        rv = gpio_direction_output(gpio, (flags & GPIOF_INIT_HIGH) ? 1 : 0);
+        rv = gpio_direction_output(gpioname, (flags & GPIOF_INIT_HIGH) ? 1 : 0);
 
     if (rv)
         goto err_free;
 
-    if ((rv = gpio_alterable_edge(gpio)) < 0)
+    if ((rv = gpio_alterable_edge(gpioname)) < 0)
         goto err_free;
 
     if (rv)
-        rv = gpio_set_edge(gpio, flags);
+        rv = gpio_set_edge(gpioname, flags);
 
   err_free:
     if (rv < 0) {
@@ -159,12 +161,12 @@ void gpio_free_array(const struct gpio *array, size_t num)
         gpio_free((array++)->gpio);
 }
 
-int gpio_alterable_edge(unsigned int gpio)
+int gpio_alterable_edge(const char *gpio)
 {
     return gpio_check(gpio, GPIO_EDGE);
 }
 
-int gpio_set_edge(unsigned int gpio, unsigned int flags)
+int gpio_set_edge(const char *gpio, unsigned int flags)
 {
     int fd, rv;
 
@@ -178,7 +180,7 @@ int gpio_set_edge(unsigned int gpio, unsigned int flags)
     return rv;
 }
 
-int gpio_get_edge(unsigned int gpio)
+int gpio_get_edge(const char *gpio)
 {
     int fd, rv;
 

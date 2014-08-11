@@ -44,31 +44,33 @@ UGPIO_BEGIN_DECLS
 struct gpio;
 typedef struct gpio ugpio_t;
 
+#define GPIO_DEFAULT_NAME "gpio%d"
+
 /**
  * Low level API
  */
-int gpio_is_requested(unsigned int gpio);
+int gpio_is_requested(const char *gpio);
 int gpio_request(unsigned int gpio, const char *label);
 int gpio_request_one(unsigned int gpio, unsigned int flags, const char *label);
 int gpio_request_array(const struct gpio *array, size_t num);
 int gpio_free(unsigned int gpio);
 void gpio_free_array(const struct gpio *array, size_t num);
 
-int gpio_alterable_direction(unsigned int gpio);
-int gpio_get_direction(unsigned int gpio);
-int gpio_direction_input(unsigned int gpio);
-int gpio_direction_output(unsigned int gpio, int value);
+int gpio_alterable_direction(const char *gpio);
+int gpio_get_direction(const char *gpio);
+int gpio_direction_input(const char *gpio);
+int gpio_direction_output(const char *gpio, int value);
 
-int gpio_get_activelow(unsigned int gpio);
-int gpio_set_activelow(unsigned int gpio, int value);
+int gpio_get_activelow(const char *gpio);
+int gpio_set_activelow(const char *gpio, int value);
 
-int gpio_get_value(unsigned int gpio);
-int gpio_set_value(unsigned int gpio, int value);
+int gpio_get_value(const char *gpio);
+int gpio_set_value(const char *gpio, int value);
 
-int gpio_alterable_edge(unsigned int gpio);
-int gpio_set_edge_str(unsigned int gpio, const char *edge);
-int gpio_set_edge(unsigned int gpio, unsigned int flags);
-int gpio_get_edge(unsigned int gpio);
+int gpio_alterable_edge(const char *gpio);
+int gpio_set_edge_str(const char *gpio, const char *edge);
+int gpio_set_edge(const char *gpio, unsigned int flags);
+int gpio_get_edge(const char *gpio);
 
 /**
  * Higher level API
@@ -79,6 +81,19 @@ int gpio_get_edge(unsigned int gpio);
  * call ugpio_open. After usage, close the object with ugpio_close and free up
  * the used ressources with ugpio_free.
  */
+
+/**
+ * Create a GPIO context(Pre exported).
+ *
+ * This function allocate a GPIO context but does not try to require and configure
+ * it. It tries to detect the current state of the GPIO and returns it's state
+ * in the GPIO context.
+ *
+ * @param gpio the GPIO name
+ * @return returns a ugpio_t object on success, NULL otherwise
+ */
+
+ugpio_t *ugpio_create_ctx(const char *gpio);
 
 /**
  * Request a GPIO context.

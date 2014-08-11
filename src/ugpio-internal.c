@@ -17,7 +17,7 @@
 #include <ugpio.h>
 #include <ugpio-internal.h>
 
-int gpio_fd_open(unsigned int gpio, const char *key, int flags)
+int gpio_fd_open(const char *gpio, const char *key, int flags)
 {
     char pathname[255];
     int rv;
@@ -122,7 +122,7 @@ int gpio_fd_set_edge(int fd, unsigned int flags)
                          strlen(ugpio_triggers[i].name) + 1);
 }
 
-ssize_t gpio_read(unsigned int gpio, const char *key, char *buf, size_t count)
+ssize_t gpio_read(const char *gpio, const char *key, char *buf, size_t count)
 {
     char pathname[255];
     ssize_t c;
@@ -148,7 +148,7 @@ ssize_t gpio_read(unsigned int gpio, const char *key, char *buf, size_t count)
     return c;
 }
 
-int gpio_write(unsigned int gpio, const char *key, const char *buf, size_t count)
+int gpio_write(const char *gpio, const char *key, const char *buf, size_t count)
 {
     char pathname[255];
     int fd;
@@ -170,7 +170,7 @@ int gpio_write(unsigned int gpio, const char *key, const char *buf, size_t count
     return close(fd);
 }
 
-int gpio_check(unsigned int gpio, const char *key)
+int gpio_check(const char *gpio, const char *key)
 {
     int fd;
     char pathname[255];

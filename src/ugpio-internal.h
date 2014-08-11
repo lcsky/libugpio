@@ -14,15 +14,17 @@
 #define GPIO_ROOT "/sys/class/gpio"
 #define GPIO_EXPORT    GPIO_ROOT "/export"
 #define GPIO_UNEXPORT  GPIO_ROOT "/unexport"
-#define GPIO_DIRECTION GPIO_ROOT "/gpio%d/direction"
-#define GPIO_ACTIVELOW GPIO_ROOT "/gpio%d/active_low"
-#define GPIO_VALUE     GPIO_ROOT "/gpio%d/value"
-#define GPIO_EDGE      GPIO_ROOT "/gpio%d/edge"
+#define GPIO_DIRECTION GPIO_ROOT "/%s/direction"
+#define GPIO_ACTIVELOW GPIO_ROOT "/%s/active_low"
+#define GPIO_VALUE     GPIO_ROOT "/%s/value"
+#define GPIO_EDGE      GPIO_ROOT "/%s/edge"
 
 /**
  * A structure describing a GPIO with configuration.
  */
 struct gpio {
+	/* a literal name string of this GPIO */
+	char *gpioname;
 	/* the GPIO number */
 	unsigned int gpio;
 	/* GPIO configuration as specified by GPIOF_* */
@@ -42,15 +44,15 @@ struct gpio {
 /**
  * Internal helpers
  */
-int gpio_fd_open(unsigned int gpio, const char *key, int flags);
+int gpio_fd_open(const char *gpio, const char *key, int flags);
 int gpio_fd_close(int fd);
 ssize_t gpio_fd_read(int fd, void *buf, size_t count);
 ssize_t gpio_fd_write(int fd, const void *buf, size_t count);
 int gpio_fd_get_edge(int fd);
 int gpio_fd_set_edge(int fd, unsigned int flags);
 
-ssize_t gpio_read(unsigned int gpio, const char *key, char *buf, size_t count);
-int gpio_write(unsigned int gpio, const char *key, const char *buf, size_t count);
-int gpio_check(unsigned int gpio, const char *key);
+ssize_t gpio_read(const char *gpio, const char *key, char *buf, size_t count);
+int gpio_write(const char *gpio, const char *key, const char *buf, size_t count);
+int gpio_check(const char *gpio, const char *key);
 
 #endif  /* _UGPIO_INTERNAL_H_ */

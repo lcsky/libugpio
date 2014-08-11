@@ -16,7 +16,7 @@
 #include <ugpio.h>
 #include <ugpio-internal.h>
 
-ugpio_t *ugpio_request(unsigned int gpio, const char *label)
+ugpio_t *ugpio_create_ctx(const char *gpio)
 {
     ugpio_t *ctx;
     int is_requested, val;
@@ -24,37 +24,36 @@ ugpio_t *ugpio_request(unsigned int gpio, const char *label)
     if ((ctx = malloc(sizeof(*ctx))) == NULL)
         return NULL;
 
-    ctx->gpio = gpio;
+    ctx->gpioname = (char *) malloc(strlen(gpio) + 1);
+    snprintf(ctx->gpioname, strlen(gpio) + 1, "%s", gpio);
+    ctx->gpio = -1;
     ctx->flags = GPIOF_CLOEXEC | GPIOF_DIRECTION_UNKNOWN;
-    ctx->label = label;
+    ctx->label = NULL;
     ctx->fd_value = -1;
     ctx->fd_active_low = -1;
     ctx->fd_direction = -1;
     ctx->fd_edge = -1;
 
-    if ((is_requested = gpio_is_requested(ctx->gpio)) < 0)
+    if ((is_requested = gpio_is_requested(ctx->gpioname)) < 0)
         goto error_free;
 
     if (!is_requested) {
-        if (gpio_request(ctx->gpio, ctx->label) < 0)
-            goto error_free;
-
-        ctx->flags |= GPIOF_REQUESTED;
+        goto error_free;
     }
 
-    if (gpio_alterable_direction(ctx->gpio)) {
+    if (gpio_alterable_direction(ctx->gpioname)) {
         ctx->flags |= GPIOF_ALTERABLE_DIRECTION;
 
-        if ((val = gpio_get_direction(ctx->gpio)) != -1) {
+        if ((val = gpio_get_direction(ctx->gpioname)) != -1) {
             ctx->flags &= ~GPIOF_DIRECTION_UNKNOWN;
             ctx->flags |= val;
         }
     }
 
-    if (gpio_alterable_edge(ctx->gpio)) {
+    if (gpio_alterable_edge(ctx->gpioname)) {
         ctx->flags |= GPIOF_ALTERABLE_EDGE;
 
-        if ((val = gpio_get_edge(ctx->gpio)) != -1) {
+        if ((val = gpio_get_edge(ctx->gpioname)) != -1) {
             ctx->flags &= ~GPIOF_TRIGGER_MASK;
             ctx->flags |= val;
         }
@@ -75,6 +74,8 @@ ugpio_t *ugpio_request_one(unsigned int gpio, unsigned int flags, const char *la
     if ((ctx = malloc(sizeof(*ctx))) == NULL)
         return NULL;
 
+    ctx->gpioname = (char *) malloc(10);
+    snprintf(ctx->gpioname, sizeof(10), GPIO_DEFAULT_NAME, gpio);
     ctx->gpio = gpio;
     ctx->flags = flags;
     ctx->label = label;
@@ -83,7 +84,7 @@ ugpio_t *ugpio_request_one(unsigned int gpio, unsigned int flags, const char *la
     ctx->fd_direction = -1;
     ctx->fd_edge = -1;
 
-    if ((is_requested = gpio_is_requested(ctx->gpio)) < 0)
+    if ((is_requested = gpio_is_requested(ctx->gpioname)) < 0)
         goto error_free;
 
     is_requested = gpio_request_one(ctx->gpio, ctx->flags, ctx->label);
@@ -95,6 +96,7 @@ ugpio_t *ugpio_request_one(unsigned int gpio, unsigned int flags, const char *la
     return ctx;
 
 error_free:
+    free(ctx->gpioname);
     free(ctx);
     return NULL;
 }
@@ -107,6 +109,7 @@ void ugpio_free(ugpio_t *ctx)
     if (ctx->flags & GPIOF_REQUESTED)
         gpio_free(ctx->gpio);
 
+    free(ctx->gpioname);
     free(ctx);
 }
 
@@ -120,7 +123,7 @@ int ugpio_open(ugpio_t *ctx)
     flags  = (ctx->flags & GPIOF_DIR_IN) ? O_RDONLY : O_RDWR;
     flags |= (ctx->flags & GPIOF_CLOEXEC) ? O_CLOEXEC : 0;
 
-    ctx->fd_value = gpio_fd_open(ctx->gpio, GPIO_VALUE, flags);
+    ctx->fd_value = gpio_fd_open(ctx->gpioname, GPIO_VALUE, flags);
 
     return ctx->fd_value;
 }
@@ -136,17 +139,17 @@ int ugpio_full_open(ugpio_t *ctx)
     flags |= (ctx->flags & GPIOF_CLOEXEC) ? O_CLOEXEC : 0;
 
     if (ctx->fd_active_low == -1)
-        ctx->fd_active_low = gpio_fd_open(ctx->gpio, GPIO_ACTIVELOW, flags);
+        ctx->fd_active_low = gpio_fd_open(ctx->gpioname, GPIO_ACTIVELOW, flags);
     if (ctx->fd_active_low == -1)
         return -1;
 
     if (ctx->fd_direction == -1 && ctx->flags & GPIOF_ALTERABLE_DIRECTION)
-        ctx->fd_direction = gpio_fd_open(ctx->gpio, GPIO_DIRECTION, flags);
+        ctx->fd_direction = gpio_fd_open(ctx->gpioname, GPIO_DIRECTION, flags);
     if (ctx->fd_direction == -1)
         return -1;
 
     if (ctx->fd_edge == -1 && ctx->flags & GPIOF_ALTERABLE_EDGE)
-        ctx->fd_edge = gpio_fd_open(ctx->gpio, GPIO_EDGE, flags);
+        ctx->fd_edge = gpio_fd_open(ctx->gpioname, GPIO_EDGE, flags);
     if (ctx->fd_edge == -1)
         return -1;
 
